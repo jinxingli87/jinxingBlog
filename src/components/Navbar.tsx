@@ -46,16 +46,18 @@ export default function Navbar() {
           <div className="w-px h-5 bg-border" />
           {session ? (
             <div className="flex items-center gap-4">
-              <Link
-                href="/admin"
-                className={`text-sm transition-colors ${
-                  isActive("/admin")
-                    ? "text-foreground font-medium"
-                    : "text-muted hover:text-foreground"
-                }`}
-              >
-                Admin
-              </Link>
+              {!!(session as unknown as Record<string, unknown>)?.isAdmin && (
+                <Link
+                  href="/admin"
+                  className={`text-sm transition-colors ${
+                    isActive("/admin")
+                      ? "text-foreground font-medium"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  Admin
+                </Link>
+              )}
               <span className="text-sm text-muted">
                 {session.user?.name || session.user?.email}
               </span>

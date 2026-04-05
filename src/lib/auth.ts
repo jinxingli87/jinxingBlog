@@ -67,12 +67,18 @@ function getAuthConfig(): NextAuthConfig {
           token.id = user.id;
           token.email = user.email;
         }
+        const adminEmail = process.env.ADMIN_EMAIL;
+        token.isAdmin =
+          !!token.email &&
+          !!adminEmail &&
+          (token.email as string).toLowerCase() === adminEmail.toLowerCase();
         return token;
       },
       async session({ session, token }) {
         if (session.user) {
           if (token.id) session.user.id = token.id as string;
           if (token.email) session.user.email = token.email as string;
+          (session as unknown as Record<string, unknown>).isAdmin = token.isAdmin ?? false;
         }
         return session;
       },
