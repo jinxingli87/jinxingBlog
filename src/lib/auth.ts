@@ -11,8 +11,7 @@ function getAuthConfig(): NextAuthConfig {
     }),
   ];
 
-  // Credentials provider only works with a database
-  if (process.env.DATABASE_URL) {
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
     providers.push(
       Credentials({
         name: "credentials",
@@ -22,14 +21,16 @@ function getAuthConfig(): NextAuthConfig {
         },
         async authorize(credentials) {
           try {
-            const { prisma } = await import("./prisma");
+            const { supabase } = await import("./supabase");
             const bcrypt = await import("bcryptjs");
 
             if (!credentials?.email || !credentials?.password) return null;
 
-            const user = await prisma.user.findUnique({
-              where: { email: credentials.email as string },
-            });
+            const { data: user } = await supabase
+              .from("users")
+              .select("id, name, email, image, password")
+              .eq("email", credentials.email as string)
+              .single();
 
             if (!user || !user.password) return null;
 

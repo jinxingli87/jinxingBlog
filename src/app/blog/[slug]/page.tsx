@@ -1,4 +1,5 @@
-import { safeDbQuery, prisma } from "@/lib/db";
+import { safeDbQuery } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { getMarkdownPostBySlug } from "@/lib/markdown";
 import { notFound } from "next/navigation";
 import CommentSection from "@/components/CommentSection";
@@ -6,13 +7,28 @@ import Link from "next/link";
 import Image from "next/image";
 
 async function getPost(slug: string) {
-  const dbPost = await safeDbQuery(
-    () => prisma.post.findUnique({ where: { slug } }),
-    null
-  );
-  if (dbPost && dbPost.category === "blog") return dbPost;
-  const mdPost = await getMarkdownPostBySlug("blog", slug);
-  return mdPost;
+  const dbPost = await safeDbQuery(async () => {
+    const { data } = await supabase
+      .from("posts")
+      .select()
+      .eq("slug", slug)
+      .eq("category", "blog")
+      .single();
+    if (!data) return null;
+    return {
+      id: data.id,
+      slug: data.slug,
+      title: data.title,
+      excerpt: data.excerpt,
+      content: data.content,
+      tags: data.tags,
+      coverImage: data.cover_image,
+      createdAt: data.created_at,
+    };
+  }, null);
+
+  if (dbPost) return dbPost;
+  return await getMarkdownPostBySlug("blog", slug);
 }
 
 export async function generateMetadata({

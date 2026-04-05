@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 
 export async function POST(request: Request) {
   try {
@@ -20,8 +20,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
+    const { data: existing } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .single();
+
+    if (existing) {
       return NextResponse.json(
         { error: "An account with this email already exists" },
         { status: 400 }
@@ -30,18 +35,18 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword },
-    });
+    const { data: user, error } = await supabase
+      .from("users")
+      .insert({ name, email, password: hashedPassword })
+      .select("id, name, email")
+      .single();
 
-    return NextResponse.json(
-      { user: { id: user.id, name: user.name, email: user.email } },
-      { status: 201 }
-    );
+    if (error) {
+      return NextResponse.json({ error: "Failed to create account" }, { status: 500 });
+    }
+
+    return NextResponse.json({ user }, { status: 201 });
   } catch {
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 }

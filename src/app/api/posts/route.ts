@@ -1,13 +1,27 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { supabase } from "@/lib/supabase";
 import { isAdmin } from "@/lib/admin";
 
 export async function GET() {
-  const posts = await prisma.post.findMany({
-    orderBy: { createdAt: "desc" },
-    include: { _count: { select: { comments: true } } },
-  });
-  return NextResponse.json(posts);
+  const { data: posts } = await supabase
+    .from("posts")
+    .select("*, comments(count)")
+    .order("created_at", { ascending: false });
+
+  const formatted = (posts || []).map((p) => ({
+    id: p.id,
+    title: p.title,
+    slug: p.slug,
+    category: p.category,
+    published: p.published,
+    createdAt: p.created_at,
+    coverImage: p.cover_image,
+    _count: {
+      comments: Array.isArray(p.comments) ? p.comments[0]?.count || 0 : 0,
+    },
+  }));
+
+  return NextResponse.json(formatted);
 }
 
 export async function POST(request: Request) {
@@ -25,7 +39,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const existing = await prisma.post.findUnique({ where: { slug } });
+  const { data: existing } = await supabase
+    .from("posts")
+    .select("id")
+    .eq("slug", slug)
+    .single();
+
   if (existing) {
     return NextResponse.json(
       { error: "A post with this slug already exists" },
@@ -33,18 +52,24 @@ export async function POST(request: Request) {
     );
   }
 
-  const post = await prisma.post.create({
-    data: {
+  const { data: post, error } = await supabase
+    .from("posts")
+    .insert({
       title,
       slug,
       excerpt: excerpt || "",
       content,
       category,
       tags: tags || "",
-      coverImage: coverImage || null,
+      cover_image: coverImage || null,
       published: published ?? true,
-    },
-  });
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: "Failed to create post" }, { status: 500 });
+  }
 
   return NextResponse.json(post, { status: 201 });
 }
