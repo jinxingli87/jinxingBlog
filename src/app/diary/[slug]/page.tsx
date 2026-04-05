@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { safeDbQuery, prisma } from "@/lib/db";
 import { getMarkdownPostBySlug } from "@/lib/markdown";
 import { notFound } from "next/navigation";
 import CommentSection from "@/components/CommentSection";
@@ -6,7 +6,10 @@ import Link from "next/link";
 import Image from "next/image";
 
 async function getPost(slug: string) {
-  const dbPost = await prisma.post.findUnique({ where: { slug } });
+  const dbPost = await safeDbQuery(
+    () => prisma.post.findUnique({ where: { slug } }),
+    null
+  );
   if (dbPost && dbPost.category === "diary") return dbPost;
   const mdPost = await getMarkdownPostBySlug("diary", slug);
   return mdPost;

@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { safeDbQuery, prisma } from "@/lib/db";
 import { getMarkdownPosts } from "@/lib/markdown";
 import PostCard from "@/components/PostCard";
 
@@ -10,10 +10,14 @@ export const metadata = {
 };
 
 export default async function BlogPage() {
-  const dbPosts = await prisma.post.findMany({
-    where: { category: "blog", published: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const dbPosts = await safeDbQuery(
+    () =>
+      prisma.post.findMany({
+        where: { category: "blog", published: true },
+        orderBy: { createdAt: "desc" },
+      }),
+    []
+  );
 
   const mdPosts = getMarkdownPosts("blog");
 
