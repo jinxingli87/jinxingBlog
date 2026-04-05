@@ -55,7 +55,7 @@ export default async function DiaryEntry({
                 day: "numeric",
               })}
             </time>
-            {tags.map((tag) => (
+            {tags.map((tag: string) => (
               <span
                 key={tag}
                 className="text-xs px-2 py-0.5 bg-gray-100 text-muted rounded-full"
